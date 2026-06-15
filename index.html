@@ -1,0 +1,763 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clinical Data Engineering — FHIR · OMOP · Big Data</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..600&family=Archivo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --ink:       #050b0c;
+    --ink-2:     #0a1517;
+    --ink-3:     #0f1f21;
+    --paper:     #e9f2ef;
+    --paper-dim: #9fb4b0;
+    --muted:     #6c8581;
+    --line:      rgba(120, 180, 172, 0.14);
+    --aqua:      #45e3c6;
+    --aqua-soft: #7ff0db;
+    --aqua-deep: #0c5b52;
+    --signal:    #f3a566;
+    --signal-d:  #c87838;
+    --glow:      rgba(69, 227, 198, 0.55);
+    --slide-ms:  10000ms;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  html, body {
+    height: 100%;
+    background: var(--ink);
+    color: var(--paper);
+    font-family: 'Archivo', system-ui, sans-serif;
+    overflow: hidden;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ============ STAGE ============ */
+  #stage {
+    position: fixed;
+    inset: 0;
+    /* 16:9 letterboxed for clean recording */
+    display: grid;
+    place-items: center;
+  }
+  #deck {
+    position: relative;
+    width: min(100vw, 177.78vh);
+    height: min(56.25vw, 100vh);
+    background:
+      radial-gradient(120% 90% at 78% 8%, rgba(12, 91, 82, 0.55), transparent 55%),
+      radial-gradient(120% 100% at 12% 96%, rgba(15, 50, 60, 0.7), transparent 60%),
+      linear-gradient(160deg, var(--ink-2), var(--ink) 70%);
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  /* ============ AMBIENT BACKGROUND ============ */
+  .grid-overlay {
+    position: absolute; inset: -2px;
+    background-image:
+      linear-gradient(var(--line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--line) 1px, transparent 1px);
+    background-size: 4.4vmin 4.4vmin;
+    mask-image: radial-gradient(120% 120% at 50% 40%, #000 30%, transparent 78%);
+    opacity: 0.6;
+    z-index: 0;
+  }
+  .orb {
+    position: absolute; border-radius: 50%;
+    filter: blur(60px); opacity: 0.5; z-index: 0;
+    mix-blend-mode: screen;
+  }
+  .orb.a { width: 46vmin; height: 46vmin; background: radial-gradient(circle, var(--aqua-deep), transparent 70%); top: -14vmin; right: -8vmin; animation: drift 26s ease-in-out infinite; }
+  .orb.b { width: 38vmin; height: 38vmin; background: radial-gradient(circle, #0d3b46, transparent 70%); bottom: -12vmin; left: -6vmin; animation: drift 32s ease-in-out infinite reverse; }
+  .orb.c { width: 26vmin; height: 26vmin; background: radial-gradient(circle, rgba(243,165,102,0.4), transparent 70%); bottom: 16vmin; right: 22vmin; animation: drift 38s ease-in-out infinite; }
+  @keyframes drift {
+    0%,100% { transform: translate(0,0) scale(1); }
+    33%     { transform: translate(4vmin,3vmin) scale(1.08); }
+    66%     { transform: translate(-3vmin,2vmin) scale(0.96); }
+  }
+
+  /* grain */
+  .grain {
+    position: absolute; inset: 0; z-index: 6; pointer-events: none;
+    opacity: 0.04; mix-blend-mode: overlay;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  /* ECG heartbeat motif along the bottom */
+  .ecg {
+    position: absolute; left: 0; bottom: 6.4vmin; width: 100%; height: 12vmin;
+    z-index: 1; pointer-events: none; opacity: 0.5;
+  }
+  .ecg svg { width: 100%; height: 100%; }
+  .ecg path {
+    fill: none; stroke: var(--aqua); stroke-width: 2; opacity: 0.32;
+    stroke-dasharray: 1400; stroke-dashoffset: 1400;
+    animation: trace 6s linear infinite;
+    filter: drop-shadow(0 0 6px var(--glow));
+  }
+  @keyframes trace { to { stroke-dashoffset: -1400; } }
+
+  /* ============ SLIDES ============ */
+  .slide {
+    position: absolute; inset: 0; z-index: 3;
+    padding: 8.2vmin 9vmin 9.5vmin;
+    display: flex; flex-direction: column; justify-content: center;
+    opacity: 0; visibility: hidden;
+    transform: scale(1.015);
+    transition: opacity 0.9s ease, transform 1.1s cubic-bezier(.22,.61,.36,1), visibility 0.9s;
+  }
+  .slide.active { opacity: 1; visibility: visible; transform: scale(1); }
+
+  .kicker {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 1.55vmin; letter-spacing: 0.34em; text-transform: uppercase;
+    color: var(--aqua); display: flex; align-items: center; gap: 1.4vmin;
+    margin-bottom: 3vmin;
+  }
+  .kicker::before {
+    content: ''; width: 5.4vmin; height: 1px; background: linear-gradient(90deg, var(--aqua), transparent);
+  }
+  .kicker .idx { color: var(--paper-dim); }
+
+  h1 {
+    font-family: 'Fraunces', serif; font-weight: 300;
+    font-size: 8.4vmin; line-height: 0.98; letter-spacing: -0.018em;
+    max-width: 17ch;
+  }
+  h1 em { font-style: italic; color: var(--aqua-soft); font-weight: 400; }
+  h2 {
+    font-family: 'Fraunces', serif; font-weight: 350;
+    font-size: 6vmin; line-height: 1.02; letter-spacing: -0.015em;
+    max-width: 18ch; margin-bottom: 1vmin;
+  }
+  h2 em { font-style: italic; color: var(--aqua-soft); }
+
+  .lede {
+    font-size: 2.3vmin; line-height: 1.5; color: var(--paper-dim);
+    max-width: 46ch; font-weight: 300; margin-top: 3vmin;
+  }
+  .lede strong { color: var(--paper); font-weight: 500; }
+
+  /* reveal animation for children of active slide */
+  .reveal { opacity: 0; transform: translateY(2.6vmin); }
+  .slide.active .reveal {
+    opacity: 1; transform: none;
+    transition: opacity 0.8s ease, transform 0.9s cubic-bezier(.22,.61,.36,1);
+  }
+  .slide.active .reveal:nth-child(1) { transition-delay: 0.15s; }
+  .slide.active .reveal:nth-child(2) { transition-delay: 0.30s; }
+  .slide.active .reveal:nth-child(3) { transition-delay: 0.45s; }
+  .slide.active .reveal:nth-child(4) { transition-delay: 0.60s; }
+  .slide.active .reveal:nth-child(5) { transition-delay: 0.75s; }
+  .slide.active .reveal:nth-child(6) { transition-delay: 0.90s; }
+
+  /* ============ COVER (slide 0) ============ */
+  .cover h1 { font-size: 9.6vmin; max-width: 16ch; }
+  .cover .badges { display: flex; gap: 1.4vmin; margin-top: 4.2vmin; flex-wrap: wrap; }
+  .chip {
+    font-family: 'JetBrains Mono', monospace; font-size: 1.5vmin; letter-spacing: 0.12em;
+    padding: 0.95vmin 1.9vmin; border: 1px solid var(--line); border-radius: 100px;
+    color: var(--paper-dim); background: rgba(255,255,255,0.018);
+    display: inline-flex; align-items: center; gap: 0.9vmin;
+  }
+  .chip b { color: var(--aqua); font-weight: 600; }
+  .chip .dot { width: 0.85vmin; height: 0.85vmin; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 10px var(--glow); }
+  .cover .sig {
+    margin-top: 5vmin; font-family: 'JetBrains Mono', monospace; font-size: 1.5vmin;
+    color: var(--muted); letter-spacing: 0.06em;
+  }
+
+  /* ============ PILLAR CARDS (slide 1) ============ */
+  .pillars { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2.4vmin; margin-top: 4.5vmin; }
+  .card {
+    border: 1px solid var(--line); border-radius: 1.6vmin; padding: 3.2vmin 2.8vmin;
+    background: linear-gradient(160deg, rgba(255,255,255,0.035), rgba(255,255,255,0.008));
+    position: relative; overflow: hidden;
+    min-height: 30vmin; display: flex; flex-direction: column;
+  }
+  .card::after {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+    background: linear-gradient(90deg, var(--aqua), transparent 80%); opacity: 0.7;
+  }
+  .card .num {
+    font-family: 'JetBrains Mono', monospace; font-size: 1.5vmin; color: var(--aqua);
+    letter-spacing: 0.2em; margin-bottom: auto;
+  }
+  .card .ttl { font-family: 'Fraunces', serif; font-size: 3.1vmin; font-weight: 400; margin-bottom: 1.4vmin; letter-spacing: -0.01em; }
+  .card .desc { font-size: 1.75vmin; line-height: 1.45; color: var(--paper-dim); font-weight: 300; }
+  .card .ico { font-size: 3.4vmin; margin-bottom: 2.4vmin; filter: grayscale(0.1); }
+
+  /* ============ TYPE CARDS (anonymization, slide 3) ============ */
+  .types { display: grid; grid-template-columns: repeat(3,1fr); gap: 2.4vmin; margin-top: 4.5vmin; }
+  .type {
+    border: 1px solid var(--line); border-radius: 1.4vmin; padding: 3vmin;
+    background: rgba(255,255,255,0.02); position: relative; overflow: hidden;
+  }
+  .type .glyph {
+    width: 7vmin; height: 7vmin; border-radius: 1.2vmin; margin-bottom: 2.4vmin;
+    display: grid; place-items: center;
+    border: 1px solid rgba(69,227,198,0.3);
+    background: radial-gradient(circle at 30% 25%, rgba(69,227,198,0.18), transparent 70%);
+  }
+  .type .glyph svg { width: 3.6vmin; height: 3.6vmin; stroke: var(--aqua); fill: none; stroke-width: 1.6; }
+  .type .name { font-family: 'Fraunces', serif; font-size: 2.9vmin; font-weight: 400; margin-bottom: 1vmin; }
+  .type .sub { font-size: 1.65vmin; color: var(--paper-dim); line-height: 1.45; font-weight: 300; }
+  .type .tag { position: absolute; top: 2.4vmin; right: 2.4vmin; font-family: 'JetBrains Mono',monospace; font-size: 1.25vmin; color: var(--signal); letter-spacing: 0.1em; }
+
+  /* ============ NUMBERED STEPS (slide 4) ============ */
+  .split { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 6vmin; align-items: center; }
+  .steps { display: flex; flex-direction: column; gap: 0; margin-top: 1vmin; }
+  .step {
+    display: grid; grid-template-columns: auto 1fr; gap: 2.6vmin; padding: 2.6vmin 0;
+    border-top: 1px solid var(--line); position: relative;
+  }
+  .step:last-child { border-bottom: 1px solid var(--line); }
+  .step .n {
+    font-family: 'Fraunces', serif; font-size: 3.4vmin; color: var(--aqua); font-style: italic;
+    line-height: 1; width: 5vmin;
+  }
+  .step .st { font-size: 2vmin; font-weight: 500; margin-bottom: 0.7vmin; }
+  .step .sd { font-size: 1.65vmin; color: var(--paper-dim); line-height: 1.4; font-weight: 300; }
+
+  /* ============ HUB (focal point, slide 5) ============ */
+  .hub-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 5vmin; align-items: center; }
+  .hub { position: relative; aspect-ratio: 1; max-height: 56vmin; margin: 0 auto; width: 100%; }
+  .hub .core {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 22%; aspect-ratio: 1; border-radius: 50%;
+    display: grid; place-items: center; text-align: center;
+    background: radial-gradient(circle at 35% 30%, var(--aqua), var(--aqua-deep));
+    color: var(--ink); font-family: 'Fraunces',serif; font-weight: 600; font-size: 1.7vmin;
+    box-shadow: 0 0 40px var(--glow), inset 0 0 20px rgba(255,255,255,0.3);
+    z-index: 2;
+  }
+  .hub .ring { position: absolute; inset: 14%; border: 1px dashed rgba(69,227,198,0.3); border-radius: 50%; animation: spin 40s linear infinite; }
+  .hub .ring.r2 { inset: 2%; border-style: solid; border-color: rgba(69,227,198,0.12); animation-duration: 60s; animation-direction: reverse; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .node {
+    position: absolute; top: 50%; left: 50%;
+    --r: 38%;
+    font-family: 'JetBrains Mono', monospace; font-size: 1.5vmin; letter-spacing: 0.08em;
+    color: var(--paper); white-space: nowrap;
+    padding: 1vmin 1.7vmin; border-radius: 100px; border: 1px solid var(--line);
+    background: rgba(8,20,22,0.85); backdrop-filter: blur(4px);
+    transform: translate(-50%,-50%) rotate(var(--a)) translateX(var(--r)) rotate(calc(-1 * var(--a)));
+  }
+  .node b { color: var(--aqua); }
+
+  /* ============ PLATFORM COLUMNS (slide 6) ============ */
+  .cols { display: grid; grid-template-columns: repeat(3,1fr); gap: 0; margin-top: 4.5vmin; }
+  .col { padding: 0 3vmin; border-left: 1px solid var(--line); }
+  .col:first-child { padding-left: 0; border-left: none; }
+  .col .ph { font-family: 'JetBrains Mono',monospace; font-size: 1.4vmin; color: var(--signal); letter-spacing: 0.14em; margin-bottom: 2vmin; }
+  .col .ch { font-family: 'Fraunces', serif; font-size: 2.7vmin; font-weight: 400; margin-bottom: 1.6vmin; line-height: 1.05; }
+  .col ul { list-style: none; display: flex; flex-direction: column; gap: 1.3vmin; }
+  .col li { font-size: 1.7vmin; color: var(--paper-dim); font-weight: 300; padding-left: 2.2vmin; position: relative; line-height: 1.35; }
+  .col li::before { content: ''; position: absolute; left: 0; top: 0.85vmin; width: 0.9vmin; height: 0.9vmin; border-radius: 50%; border: 1px solid var(--aqua); }
+
+  /* ============ CLOSING (slide 7) ============ */
+  .closing { align-items: center; text-align: center; }
+  .closing h1 { font-size: 10vmin; max-width: 18ch; margin: 0 auto; }
+  .closing .lede { margin-left: auto; margin-right: auto; text-align: center; max-width: 50ch; }
+  .closing .cta {
+    margin-top: 5vmin; display: inline-flex; gap: 2vmin; align-items: center;
+    font-family: 'JetBrains Mono', monospace; font-size: 1.7vmin; letter-spacing: 0.1em;
+    color: var(--ink); background: var(--aqua); padding: 1.6vmin 3vmin; border-radius: 100px;
+    box-shadow: 0 0 40px var(--glow);
+  }
+
+  /* mini flow diagram on FHIR slide */
+  .flow { display: flex; align-items: center; gap: 2.2vmin; margin-top: 4.5vmin; flex-wrap: wrap; }
+  .flow .stage {
+    border: 1px solid var(--line); border-radius: 1.2vmin; padding: 2.2vmin 2.6vmin;
+    background: rgba(255,255,255,0.02); min-width: 22vmin;
+  }
+  .flow .stage .l { font-family:'JetBrains Mono',monospace; font-size: 1.3vmin; color: var(--aqua); letter-spacing: 0.12em; margin-bottom: 0.9vmin; }
+  .flow .stage .t { font-family: 'Fraunces', serif; font-size: 2.4vmin; font-weight: 400; }
+  .flow .arrow { color: var(--aqua); font-size: 2.6vmin; opacity: 0.6; }
+  .cred {
+    margin-top: 4vmin; display: inline-flex; align-items: center; gap: 1.4vmin;
+    font-size: 1.7vmin; color: var(--paper-dim);
+    border-left: 2px solid var(--signal); padding-left: 2vmin;
+  }
+  .cred b { color: var(--paper); font-weight: 500; }
+
+  /* ============ PROBLEM — SILOS ============ */
+  .silos { display: flex; gap: 2.2vmin; margin-top: 4.4vmin; align-items: stretch; }
+  .silo {
+    flex: 1; border: 1px solid var(--line); border-radius: 1.4vmin; padding: 2.8vmin 2.4vmin;
+    background: rgba(255,255,255,0.02); position: relative; overflow: hidden;
+  }
+  .silo::after { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--signal), transparent 80%); opacity: 0.7; }
+  .silo .lock { position: absolute; top: 2.4vmin; right: 2.4vmin; font-size: 2vmin; opacity: 0.55; }
+  .silo .h { font-family: 'JetBrains Mono', monospace; font-size: 1.35vmin; letter-spacing: 0.14em; color: var(--signal); margin-bottom: 1.6vmin; }
+  .silo .nm { font-family: 'Fraunces', serif; font-size: 2.7vmin; font-weight: 400; margin-bottom: 0.9vmin; }
+  .silo .ds { font-size: 1.6vmin; color: var(--paper-dim); line-height: 1.4; font-weight: 300; }
+  .silo .code { font-family: 'JetBrains Mono', monospace; font-size: 1.3vmin; color: var(--muted); margin-top: 1.8vmin; padding-top: 1.4vmin; border-top: 1px dashed var(--line); }
+  .silo .code b { color: var(--signal-d); }
+  .verdict { margin-top: 3.6vmin; font-size: 2.1vmin; color: var(--paper-dim); font-weight: 300; }
+  .verdict b { color: var(--signal); font-weight: 500; }
+
+  /* ============ NATURAL JOIN DIAGRAM ============ */
+  .join { display: grid; grid-template-columns: 1.1fr auto 1fr; gap: 3vmin; align-items: center; margin-top: 3.6vmin; }
+  .stack { display: flex; flex-direction: column; gap: 1.4vmin; }
+  .minitbl { border: 1px solid var(--line); border-radius: 1vmin; overflow: hidden; background: rgba(255,255,255,0.025); }
+  .minitbl .cap { font-family: 'JetBrains Mono', monospace; font-size: 1.2vmin; letter-spacing: 0.1em; color: var(--paper-dim); padding: 0.8vmin 1.3vmin; border-bottom: 1px solid var(--line); background: rgba(255,255,255,0.03); }
+  .minitbl .row { display: flex; font-family: 'JetBrains Mono', monospace; font-size: 1.25vmin; }
+  .minitbl .row + .row { border-top: 1px solid var(--line); }
+  .minitbl .row span { padding: 0.7vmin 1.3vmin; color: var(--paper-dim); flex: 1; }
+  .minitbl .row .key { color: var(--aqua); background: rgba(69,227,198,0.1); border-right: 1px solid var(--line); flex: 0 0 11vmin; font-weight: 500; }
+  .bowtie { font-size: 7vmin; color: var(--aqua); text-align: center; line-height: 1; filter: drop-shadow(0 0 18px var(--glow)); animation: tie 3.2s ease-in-out infinite; }
+  .bowtie small { display: block; font-family: 'JetBrains Mono', monospace; font-size: 1.3vmin; letter-spacing: 0.16em; color: var(--paper-dim); margin-top: 1vmin; filter: none; }
+  @keyframes tie { 0%,100% { opacity: 0.75; transform: scale(1); } 50% { opacity: 1; transform: scale(1.07); } }
+  .result-tbl { border: 1px solid rgba(69,227,198,0.45); border-radius: 1.2vmin; padding: 2.8vmin 2.4vmin; text-align: center; background: radial-gradient(circle at 50% 0%, rgba(69,227,198,0.12), transparent 75%); position: relative; }
+  .result-tbl::before { content: '✓ READY'; position: absolute; top: 1.6vmin; right: 1.6vmin; font-family: 'JetBrains Mono', monospace; font-size: 1.1vmin; letter-spacing: 0.12em; color: var(--aqua); }
+  .result-tbl .rt { font-family: 'Fraunces', serif; font-size: 3vmin; font-weight: 400; margin-bottom: 0.9vmin; }
+  .result-tbl .rs { font-size: 1.6vmin; color: var(--paper-dim); font-weight: 300; line-height: 1.4; }
+  .joincode {
+    margin-top: 3.4vmin; font-family: 'JetBrains Mono', monospace; font-size: 1.85vmin;
+    color: var(--paper); background: rgba(0,0,0,0.32); border: 1px solid var(--line);
+    border-radius: 1vmin; padding: 1.6vmin 2.2vmin; display: inline-block; letter-spacing: 0.02em;
+  }
+  .joincode .kw { color: var(--aqua); }
+  .joincode .cm { color: var(--muted); }
+  .tiein {
+    margin-top: 3.2vmin; display: inline-flex; align-items: center; gap: 1.3vmin;
+    font-size: 1.7vmin; color: var(--aqua-soft); font-weight: 300;
+    border-left: 2px solid var(--aqua); padding-left: 1.8vmin;
+  }
+  .tiein b { color: var(--paper); font-weight: 500; }
+
+  /* ============ PIPELINE — unstructured → NJ layer → agent ============ */
+  .pipe { display: grid; grid-template-columns: 1fr 6.5vmin 1.3fr 6.5vmin 1fr; align-items: stretch; margin-top: 4vmin; gap: 0; }
+  .pstage { border: 1px solid var(--line); border-radius: 1.4vmin; padding: 2.6vmin 2.2vmin; background: rgba(255,255,255,0.02); position: relative; min-height: 35vmin; display: flex; flex-direction: column; }
+  .plabel { font-family: 'JetBrains Mono', monospace; font-size: 1.3vmin; letter-spacing: 0.12em; color: var(--aqua); margin-bottom: 2vmin; display: flex; align-items: center; gap: 0.8vmin; }
+
+  .pstage.src { background: rgba(243,165,102,0.045); }
+  .pstage.src .plabel { color: var(--signal); }
+  .srccluster { display: flex; flex-wrap: wrap; gap: 0.9vmin; }
+  .schip { font-family: 'JetBrains Mono', monospace; font-size: 1.32vmin; padding: 0.8vmin 1.2vmin; border-radius: 0.7vmin; border: 1px solid var(--line); background: rgba(255,255,255,0.03); color: var(--paper-dim); }
+  .schip:nth-child(odd) { transform: rotate(-1.3deg); }
+  .schip:nth-child(even) { transform: rotate(1deg); }
+  .srcmore { margin-top: auto; padding-top: 1.8vmin; font-family: 'JetBrains Mono', monospace; font-size: 1.3vmin; color: var(--muted); }
+
+  .pflow { position: relative; display: grid; place-items: center; }
+  .pflow .track { width: 86%; height: 2px; background: repeating-linear-gradient(90deg, var(--aqua) 0 1.1vmin, transparent 1.1vmin 2.6vmin); background-size: 2.6vmin 2px; animation: flowmove 0.8s linear infinite; box-shadow: 0 0 8px var(--glow); }
+  @keyframes flowmove { to { background-position: -2.6vmin 0; } }
+  .pflow .ah { position: absolute; right: 0.4vmin; color: var(--aqua); font-size: 2.2vmin; filter: drop-shadow(0 0 6px var(--glow)); }
+
+  .pstage.layer {
+    background:
+      linear-gradient(160deg, rgba(69,227,198,0.1), rgba(69,227,198,0.02)),
+      repeating-linear-gradient(90deg, rgba(69,227,198,0.06) 0 1px, transparent 1px 3vmin);
+    border-color: rgba(69,227,198,0.42);
+  }
+  .pstage.layer::after { content: ''; position: absolute; inset: 0; border-radius: 1.4vmin; box-shadow: inset 0 0 34px rgba(69,227,198,0.14); pointer-events: none; }
+  .lcore { font-family: 'Fraunces', serif; font-size: 2.9vmin; font-weight: 400; margin-bottom: 1.8vmin; line-height: 1.05; }
+  .lcore b { color: var(--aqua); font-style: italic; }
+  .lfeats { list-style: none; display: flex; flex-direction: column; gap: 1.1vmin; }
+  .lfeats li { font-size: 1.6vmin; color: var(--paper-dim); font-weight: 300; padding-left: 2.6vmin; position: relative; line-height: 1.3; }
+  .lfeats li::before { content: '⋈'; position: absolute; left: 0; color: var(--aqua); font-size: 1.5vmin; top: 0.1vmin; }
+  .lfeats li b { color: var(--paper); font-weight: 500; }
+
+  .pstage.agent { align-items: center; text-align: center; }
+  .pstage.agent .plabel { align-self: flex-start; }
+  .agenthex {
+    width: 11vmin; height: 12vmin; margin: 0.6vmin auto 1.6vmin; position: relative;
+    display: grid; place-items: center; text-align: center;
+    background: radial-gradient(circle at 35% 28%, var(--aqua-soft), var(--aqua-deep));
+    color: var(--ink); font-family: 'JetBrains Mono', monospace; font-size: 1.35vmin; letter-spacing: 0.08em; font-weight: 600;
+    clip-path: polygon(25% 4%, 75% 4%, 100% 50%, 75% 96%, 25% 96%, 0% 50%);
+    box-shadow: 0 0 36px var(--glow); animation: tie 3s ease-in-out infinite;
+  }
+  .agenthex .em { font-size: 3vmin; display: block; margin-bottom: 0.3vmin; }
+  .agentcap { font-size: 1.5vmin; color: var(--paper-dim); font-weight: 300; line-height: 1.35; margin-bottom: 2vmin; }
+  .outs { display: flex; gap: 1.1vmin; justify-content: center; margin-top: auto; flex-wrap: wrap; }
+  .obadge { font-family: 'JetBrains Mono', monospace; font-size: 1.5vmin; letter-spacing: 0.06em; padding: 1vmin 1.7vmin; border-radius: 100px; border: 1px solid rgba(69,227,198,0.5); color: var(--aqua); background: rgba(69,227,198,0.09); display: inline-flex; align-items: center; gap: 0.7vmin; }
+  .obadge::before { content: '✦'; font-size: 1.2vmin; }
+
+  /* ============ HUD: progress, dots, controls ============ */
+  .progress { position: absolute; top: 0; left: 0; height: 3px; width: 100%; z-index: 7; background: rgba(255,255,255,0.05); }
+  .progress .bar { height: 100%; width: 0; background: linear-gradient(90deg, var(--aqua), var(--aqua-soft)); box-shadow: 0 0 12px var(--glow); }
+  .progress .bar.run { transition: width var(--slide-ms) linear; width: 100%; }
+
+  .hud {
+    position: absolute; bottom: 3.4vmin; left: 9vmin; right: 9vmin; z-index: 7;
+    display: flex; align-items: center; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace; font-size: 1.4vmin; color: var(--muted);
+  }
+  .dots { display: flex; gap: 1.1vmin; }
+  .dots button {
+    width: 2.4vmin; height: 0.5vmin; border-radius: 4px; border: none; cursor: pointer;
+    background: rgba(255,255,255,0.16); transition: all 0.4s ease; padding: 0;
+  }
+  .dots button.on { background: var(--aqua); width: 4.2vmin; box-shadow: 0 0 10px var(--glow); }
+  .ctrls { display: flex; align-items: center; gap: 1.8vmin; }
+  .ctrls button {
+    background: none; border: 1px solid var(--line); color: var(--paper-dim); cursor: pointer;
+    width: 3.4vmin; height: 3.4vmin; border-radius: 50%; display: grid; place-items: center;
+    transition: all 0.25s ease; font-size: 1.5vmin;
+  }
+  .ctrls button:hover { border-color: var(--aqua); color: var(--aqua); }
+  .counter b { color: var(--paper); }
+
+  .brandmark { position: absolute; top: 5vmin; right: 9vmin; z-index: 7; display: flex; align-items: center; gap: 1.1vmin; font-family:'JetBrains Mono',monospace; font-size: 1.35vmin; letter-spacing: 0.2em; color: var(--paper-dim); }
+  .brandmark .pulse { width: 0.9vmin; height: 0.9vmin; border-radius: 50%; background: var(--aqua); box-shadow: 0 0 0 0 var(--glow); animation: pulse 2.4s ease-out infinite; }
+  @keyframes pulse { 0% { box-shadow: 0 0 0 0 var(--glow); } 70% { box-shadow: 0 0 0 1.4vmin transparent; } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+  @media (max-width: 720px) {
+    .pillars, .types, .cols { grid-template-columns: 1fr; gap: 1.4vmin; }
+    .split, .hub-wrap { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+<div id="stage">
+  <main id="deck">
+    <!-- ambient -->
+    <div class="grid-overlay"></div>
+    <div class="orb a"></div><div class="orb b"></div><div class="orb c"></div>
+    <div class="ecg"><svg viewBox="0 0 1400 120" preserveAspectRatio="none">
+      <path d="M0,60 L260,60 L290,60 L305,20 L325,100 L345,60 L520,60 L545,60 L560,38 L572,82 L588,60 L820,60 L850,60 L865,18 L885,102 L905,60 L1080,60 L1110,60 L1126,42 L1138,78 L1152,60 L1400,60" />
+    </svg></div>
+    <div class="grain"></div>
+
+    <!-- HUD -->
+    <div class="progress"><div class="bar" id="bar"></div></div>
+    <div class="brandmark"><span class="pulse"></span> CLINICAL DATA · CAPABILITY BRIEF</div>
+
+    <!-- ===== SLIDE 0 — COVER ===== -->
+    <section class="slide cover active">
+      <div class="kicker reveal"><span class="idx">FHIR</span> · OMOP · BIG DATA · ANONYMIZATION</div>
+      <h1 class="reveal">Clinical data,<br>engineered for <em>discovery.</em></h1>
+      <div class="badges reveal">
+        <span class="chip"><span class="dot"></span> <b>FHIR</b>-native interoperability</span>
+        <span class="chip"><span class="dot"></span> <b>OMOP</b> research model</span>
+        <span class="chip"><span class="dot"></span> Privacy by design</span>
+      </div>
+      <p class="lede reveal">A data-engineering practice that makes real-world clinical data — <strong>text, imaging and structured</strong> — safe, standardized and <strong>naturally joinable</strong> for DS / AI / ML.</p>
+      <div class="sig reveal">// the payoff: clinical data that joins by design ⋈</div>
+    </section>
+
+    <!-- ===== SLIDE 1 — THE PROBLEM ===== -->
+    <section class="slide">
+      <div class="kicker reveal"><span class="idx">⚠</span> The problem</div>
+      <h2 class="reveal">Same patient. <em>Three islands.</em> No common key.</h2>
+      <div class="silos">
+        <div class="silo reveal">
+          <span class="lock">🔒</span>
+          <div class="h">SOURCE A</div>
+          <div class="nm">EHR notes</div>
+          <div class="ds">Diagnoses buried in free text and local ICD-9 codes.</div>
+          <div class="code">patient = <b>"MRN-4471"</b></div>
+        </div>
+        <div class="silo reveal">
+          <span class="lock">🔒</span>
+          <div class="h">SOURCE B</div>
+          <div class="nm">Lab results</div>
+          <div class="ds">Analytes in a lab system's own private code set.</div>
+          <div class="code">subject = <b>"LAB_88120"</b></div>
+        </div>
+        <div class="silo reveal">
+          <span class="lock">🔒</span>
+          <div class="h">SOURCE C</div>
+          <div class="nm">DICOM imaging</div>
+          <div class="ds">Studies keyed by separate IDs, PHI in the headers.</div>
+          <div class="code">PatientID = <b>"0x9F22"</b></div>
+        </div>
+      </div>
+      <p class="verdict reveal">Three vocabularies, three identifiers, three silos — <b>the join fails, and the research can't start.</b></p>
+    </section>
+
+    <!-- ===== SLIDE 2 — NATURAL JOINS (THESIS) ===== -->
+    <section class="slide">
+      <div class="kicker reveal"><span class="idx">✦</span> The idea</div>
+      <h2 class="reveal">Make the data <em>naturally joinable</em></h2>
+      <div class="join reveal">
+        <div class="stack">
+          <div class="minitbl">
+            <div class="cap">EHR</div>
+            <div class="row"><span class="key">person_id</span><span>concept</span></div>
+            <div class="row"><span class="key">88931</span><span>SNOMED 73211009</span></div>
+          </div>
+          <div class="minitbl">
+            <div class="cap">LABS</div>
+            <div class="row"><span class="key">person_id</span><span>concept</span></div>
+            <div class="row"><span class="key">88931</span><span>LOINC 4548-4</span></div>
+          </div>
+          <div class="minitbl">
+            <div class="cap">IMAGING</div>
+            <div class="row"><span class="key">person_id</span><span>concept</span></div>
+            <div class="row"><span class="key">88931</span><span>RID 28662</span></div>
+          </div>
+        </div>
+        <div class="bowtie">⋈<small>NATURAL JOIN</small></div>
+        <div class="result-tbl">
+          <div class="rt">One unified cohort</div>
+          <div class="rs">Every record lines up on a shared <b>person_id</b> and standard concept — across all three sources.</div>
+        </div>
+      </div>
+      <div class="joincode reveal"><span class="kw">SELECT</span> * <span class="kw">FROM</span> ehr <span class="kw">NATURAL JOIN</span> labs <span class="kw">NATURAL JOIN</span> imaging<span class="cm">  -- it just works</span></div>
+    </section>
+
+    <!-- ===== SLIDE 3 — THE PIPELINE ===== -->
+    <section class="slide">
+      <div class="kicker reveal"><span class="idx">⚙</span> How the layer is built</div>
+      <h2 class="reveal">Unstructured in. <em>Standards</em> out.</h2>
+      <div class="pipe">
+        <!-- stage 1: many unstructured sources -->
+        <div class="pstage src reveal">
+          <div class="plabel">▦ MANY UNSTRUCTURED SOURCES</div>
+          <div class="srccluster">
+            <span class="schip">Clinical notes</span>
+            <span class="schip">DICOM</span>
+            <span class="schip">Path reports</span>
+            <span class="schip">HL7 v2</span>
+            <span class="schip">Discharge PDFs</span>
+            <span class="schip">Lab feeds</span>
+            <span class="schip">Free text</span>
+            <span class="schip">Scans</span>
+          </div>
+          <div class="srcmore">+ millions of records, no shared key</div>
+        </div>
+
+        <div class="pflow reveal"><div class="track"></div><span class="ah">▸</span></div>
+
+        <!-- stage 2: NJ builds the semantic layer -->
+        <div class="pstage layer reveal">
+          <div class="plabel">⋈ NATURAL-JOIN LAYER</div>
+          <div class="lcore">NJ builds the <b>semantic layer</b></div>
+          <ul class="lfeats">
+            <li><b>Algorithmic</b> record linkage</li>
+            <li><b>Research semantics</b> &amp; ontologies</li>
+            <li>Terminology resolution</li>
+            <li>Concept &amp; entity matching</li>
+          </ul>
+        </div>
+
+        <div class="pflow reveal"><div class="track"></div><span class="ah">▸</span></div>
+
+        <!-- stage 3: agent emits OMOP / FHIR -->
+        <div class="pstage agent reveal">
+          <div class="plabel">✦ AI AGENT</div>
+          <div class="agenthex"><span><span class="em">⬡</span>agent</span></div>
+          <div class="agentcap">Reads the layer and writes standards-compliant models</div>
+          <div class="outs">
+            <span class="obadge">OMOP CDM</span>
+            <span class="obadge">FHIR</span>
+          </div>
+        </div>
+      </div>
+      <div class="tiein reveal"><span>The layer does the heavy lifting — <b>the agent just maps a clean, joined semantic layer onto OMOP &amp; FHIR.</b></span></div>
+    </section>
+
+    <!-- ===== SLIDE 4 — FHIR / OMOP ===== -->
+    <section class="slide">
+      <div class="kicker reveal"><span class="idx">01</span> Interoperability — the join key</div>
+      <h2 class="reveal">FHIR &amp; OMOP give every record the <em>same shape</em></h2>
+      <p class="lede reveal" style="margin-top:1.6vmin">Mapping every source to FHIR resources and the OMOP common model creates the <strong>shared columns and standard concepts</strong> a natural join runs on.</p>
+      <div class="flow reveal">
+        <div class="stage"><div class="l">STANDARD</div><div class="t">FHIR work groups</div></div>
+        <span class="arrow">→</span>
+        <div class="stage"><div class="l">ARCHITECTURE</div><div class="t">Solution &amp; use cases</div></div>
+        <span class="arrow">→</span>
+        <div class="stage"><div class="l">RESEARCH MODEL</div><div class="t">OMOP CDM</div></div>
+      </div>
+      <div class="cred reveal"><span>Established &amp; chair the <b>FHIR work groups within Clalit</b> — driving ecosystem activity, solution architecture and management.</span></div>
+    </section>
+
+    <!-- ===== SLIDE 4 — ANONYMIZATION ===== -->
+    <section class="slide">
+      <div class="kicker reveal"><span class="idx">02</span> Privacy by design</div>
+      <h2 class="reveal">De-identification across <em>every</em> data type</h2>
+      <div class="types">
+        <div class="type reveal">
+          <span class="tag">NLP</span>
+          <div class="glyph"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h12M4 18h8"/></svg></div>
+          <div class="name">Text</div>
+          <div class="sub">Free-text clinical notes scrubbed of identifiers while preserving meaning.</div>
+        </div>
+        <div class="type reveal">
+          <span class="tag">IMAGING</span>
+          <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 14l5-4 4 3 3-3 6 5"/></svg></div>
+          <div class="name">DICOM</div>
+          <div class="sub">Imaging de-identified at pixel &amp; header level — metadata and burned-in PHI removed.</div>
+        </div>
+        <div class="type reveal">
+          <span class="tag">TABULAR</span>
+          <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></div>
+          <div class="name">Structured</div>
+          <div class="sub">Tabular &amp; coded data re-keyed and masked under consistent, governed rules.</div>
+        </div>
+      </div>
+      <div class="tiein reveal" style="margin-top:3.6vmin"><span>Consistent, <b>stable pseudonymous keys</b> — so data stays private and still joins across sources. Tools built in-house, then operated in production. ⋈</span></div>
+    </section>
+
+    <!-- ===== SLIDE 5 — DATA PREPARATION ===== -->
+    <section class="slide">
+      <div class="split">
+        <div>
+          <div class="kicker reveal"><span class="idx">03</span> Data preparation</div>
+          <h2 class="reveal">The terminology layer is the <em>join vocabulary</em></h2>
+          <p class="lede reveal">Re-coding to shared terminologies is what turns raw, mismatched sources into datasets that line up — and join — by design.</p>
+        </div>
+        <div class="steps">
+          <div class="step reveal">
+            <div class="n">i</div>
+            <div><div class="st">Map &amp; acquire</div><div class="sd">Map existing data and acquire new sets to fill the gaps.</div></div>
+          </div>
+          <div class="step reveal">
+            <div class="n">ii</div>
+            <div><div class="st">Terminology infrastructure</div><div class="sd">Stand up the terminology layer; describe and document content and its constraints.</div></div>
+          </div>
+          <div class="step reveal">
+            <div class="n">iii</div>
+            <div><div class="st">Engineer &amp; govern</div><div class="sd">Lead the data-engineering team: curate, merge, re-code, de-identify, load and manage the sets.</div></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SLIDE 6 — FOCAL POINT ===== -->
+    <section class="slide">
+      <div class="hub-wrap">
+        <div>
+          <div class="kicker reveal"><span class="idx">04</span> Data stewardship</div>
+          <h2 class="reveal">One source of truth behind every <em>join</em></h2>
+          <p class="lede reveal">The focal point teams come to — knowing the keys, sources and lineage behind each dataset, so the right tables join with confidence.</p>
+        </div>
+        <div class="hub reveal">
+          <div class="ring"></div><div class="ring r2"></div>
+          <div class="core">DATA<br>FOCAL POINT</div>
+          <span class="node" style="--a:-90deg"><b>·</b> Whereabouts</span>
+          <span class="node" style="--a:-18deg"><b>·</b> Contents</span>
+          <span class="node" style="--a:54deg"><b>·</b> Source</span>
+          <span class="node" style="--a:126deg"><b>·</b> Integrity</span>
+          <span class="node" style="--a:198deg"><b>·</b> Accuracy</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SLIDE 7 — PLATFORM ===== -->
+    <section class="slide">
+      <div class="kicker reveal"><span class="idx">05</span> Platform</div>
+      <h2 class="reveal">Where the joins run — <em>at scale</em></h2>
+      <p class="lede reveal" style="margin-top:1.4vmin">On-premise big data, architected and orchestrated to join billions of records securely behind your walls.</p>
+      <div class="cols">
+        <div class="col reveal">
+          <div class="ph">PHASE 01</div>
+          <div class="ch">Roadmap &amp; architecture</div>
+          <ul><li>Define the infrastructure roadmap</li><li>Solution architecture for scale</li><li>On-premise by design</li></ul>
+        </div>
+        <div class="col reveal">
+          <div class="ph">PHASE 02</div>
+          <div class="ch">Orchestrate teams</div>
+          <ul><li>Align cross-organization teams</li><li>Build the delivery &amp; support model</li><li>Keep the platform running</li></ul>
+        </div>
+        <div class="col reveal">
+          <div class="ph">PHASE 03</div>
+          <div class="ch">Acquire &amp; control resources</div>
+          <ul><li>Budget &amp; recruiting</li><li>Licenses &amp; hardware</li><li>Ongoing cost control</li></ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== SLIDE 8 — CLOSING ===== -->
+    <section class="slide closing">
+      <div class="kicker reveal" style="justify-content:center"><span class="idx">⋈</span> Partner with us</div>
+      <h1 class="reveal">Clinical data that <em>joins by design.</em></h1>
+      <p class="lede reveal">FHIR &amp; OMOP for shared keys, privacy that preserves them, and an on-premise platform to run the joins — so your DS, AI and ML start from one ready, governed, trusted cohort.</p>
+      <div class="tiein reveal" style="margin-top:3vmin;text-align:left"><span>Benchmarked: <b>higher accuracy</b> than the latest Claude model — at <b>~1/10 the price</b>. ⋈</span></div>
+      <div class="cta reveal">LET'S TALK DATA ⋈</div>
+    </section>
+
+    <!-- HUD bottom -->
+    <div class="hud">
+      <div class="dots" id="dots"></div>
+      <div class="ctrls">
+        <span class="counter"><b id="cur">01</b> / <span id="total">08</span></span>
+        <button id="prev" aria-label="Previous">‹</button>
+        <button id="play" aria-label="Play / pause">❚❚</button>
+        <button id="next" aria-label="Next">›</button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const bar = document.getElementById('bar');
+  const dotsWrap = document.getElementById('dots');
+  const curEl = document.getElementById('cur');
+  const totalEl = document.getElementById('total');
+  const DURATION = 10000; // keep in sync with --slide-ms
+
+  let idx = 0;
+  let playing = true;
+  let timer = null;
+
+  totalEl.textContent = String(slides.length).padStart(2, '0');
+
+  // build dots
+  slides.forEach((_, i) => {
+    const b = document.createElement('button');
+    b.addEventListener('click', () => { go(i); });
+    dotsWrap.appendChild(b);
+  });
+  const dots = Array.from(dotsWrap.children);
+
+  function restartBar() {
+    bar.classList.remove('run');
+    // force reflow so the transition restarts cleanly
+    void bar.offsetWidth;
+    if (playing) bar.classList.add('run');
+  }
+
+  function render() {
+    slides.forEach((s, i) => s.classList.toggle('active', i === idx));
+    dots.forEach((d, i) => d.classList.toggle('on', i === idx));
+    curEl.textContent = String(idx + 1).padStart(2, '0');
+    restartBar();
+  }
+
+  function schedule() {
+    clearTimeout(timer);
+    if (playing) timer = setTimeout(() => go(idx + 1), DURATION);
+  }
+
+  function go(n) {
+    idx = (n + slides.length) % slides.length;
+    render();
+    schedule();
+  }
+
+  function setPlaying(p) {
+    playing = p;
+    document.getElementById('play').textContent = p ? '❚❚' : '▶';
+    if (p) { restartBar(); schedule(); }
+    else { clearTimeout(timer); bar.classList.remove('run'); }
+  }
+
+  document.getElementById('next').addEventListener('click', () => go(idx + 1));
+  document.getElementById('prev').addEventListener('click', () => go(idx - 1));
+  document.getElementById('play').addEventListener('click', () => setPlaying(!playing));
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') go(idx + 1);
+    else if (e.key === 'ArrowLeft') go(idx - 1);
+    else if (e.key === ' ') { e.preventDefault(); setPlaying(!playing); }
+  });
+
+  // kick off
+  go(0);
+</script>
+<!-- GoatCounter analytics — register the code "natural-joints" at goatcounter.com (free), or swap in your own -->
+<script data-goatcounter="https://natural-joints.goatcounter.com/count"
+        async src="//gc.zgo.at/count.js"></script>
+</body>
+</html>
