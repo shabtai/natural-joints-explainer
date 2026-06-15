@@ -333,7 +333,7 @@
   }
   .tiein b { color: var(--paper); font-weight: 500; }
 
-  /* ============ PIPELINE — unstructured → NJ layer → agent ============ */
+  /* ============ PIPELINE — tabular sources → NJ layer → agent ============ */
   .pipe { display: grid; grid-template-columns: 1fr 6.5vmin 1.3fr 6.5vmin 1fr; align-items: stretch; margin-top: 4vmin; gap: 0; }
   .pstage { border: 1px solid var(--line); border-radius: 1.4vmin; padding: 2.6vmin 2.2vmin; background: rgba(255,255,255,0.02); position: relative; min-height: 35vmin; display: flex; flex-direction: column; }
   .plabel { font-family: 'JetBrains Mono', monospace; font-size: 1.3vmin; letter-spacing: 0.12em; color: var(--aqua); margin-bottom: 2vmin; display: flex; align-items: center; gap: 0.8vmin; }
@@ -440,7 +440,7 @@
         <span class="chip"><span class="dot"></span> <b>OMOP</b> research model</span>
         <span class="chip"><span class="dot"></span> Privacy by design</span>
       </div>
-      <p class="lede reveal">A data-engineering practice that makes real-world clinical data — <strong>text, imaging and structured</strong> — safe, standardized and <strong>naturally joinable</strong> for DS / AI / ML.</p>
+      <p class="lede reveal">A data-engineering practice that makes real-world clinical data — <strong>structured &amp; tabular</strong> — safe, standardized and <strong>naturally joinable</strong> for DS / AI / ML.</p>
       <div class="sig reveal">// the payoff: clinical data that joins by design ⋈</div>
     </section>
 
@@ -452,8 +452,8 @@
         <div class="silo reveal">
           <span class="lock">🔒</span>
           <div class="h">SOURCE A</div>
-          <div class="nm">EHR notes</div>
-          <div class="ds">Diagnoses buried in free text and local ICD-9 codes.</div>
+          <div class="nm">EHR diagnoses</div>
+          <div class="ds">A table of diagnoses coded in ICD-9, on its own ID scheme.</div>
           <div class="code">patient = <b>"MRN-4471"</b></div>
         </div>
         <div class="silo reveal">
@@ -466,9 +466,9 @@
         <div class="silo reveal">
           <span class="lock">🔒</span>
           <div class="h">SOURCE C</div>
-          <div class="nm">DICOM imaging</div>
-          <div class="ds">Studies keyed by separate IDs, PHI in the headers.</div>
-          <div class="code">PatientID = <b>"0x9F22"</b></div>
+          <div class="nm">Pharmacy / claims</div>
+          <div class="ds">Dispensings in ATC codes, keyed by a different member ID.</div>
+          <div class="code">member_id = <b>"RX-3055"</b></div>
         </div>
       </div>
       <p class="verdict reveal">Three vocabularies, three identifiers, three silos — <b>the join fails, and the research can't start.</b></p>
@@ -491,9 +491,9 @@
             <div class="row"><span class="key">88931</span><span>LOINC 4548-4</span></div>
           </div>
           <div class="minitbl">
-            <div class="cap">IMAGING</div>
+            <div class="cap">PHARMACY</div>
             <div class="row"><span class="key">person_id</span><span>concept</span></div>
-            <div class="row"><span class="key">88931</span><span>RID 28662</span></div>
+            <div class="row"><span class="key">88931</span><span>RxNorm 83367</span></div>
           </div>
         </div>
         <div class="bowtie">⋈<small>NATURAL JOIN</small></div>
@@ -502,28 +502,28 @@
           <div class="rs">Every record lines up on a shared <b>person_id</b> and standard concept — across all three sources.</div>
         </div>
       </div>
-      <div class="joincode reveal"><span class="kw">SELECT</span> * <span class="kw">FROM</span> ehr <span class="kw">NATURAL JOIN</span> labs <span class="kw">NATURAL JOIN</span> imaging<span class="cm">  -- it just works</span></div>
+      <div class="joincode reveal"><span class="kw">SELECT</span> * <span class="kw">FROM</span> ehr <span class="kw">NATURAL JOIN</span> labs <span class="kw">NATURAL JOIN</span> pharmacy<span class="cm">  -- it just works</span></div>
     </section>
 
     <!-- ===== SLIDE 3 — THE PIPELINE ===== -->
     <section class="slide">
       <div class="kicker reveal"><span class="idx">⚙</span> How the layer is built</div>
-      <h2 class="reveal">Unstructured in. <em>Standards</em> out.</h2>
+      <h2 class="reveal">Tabular in. <em>Standards</em> out.</h2>
       <div class="pipe">
-        <!-- stage 1: many unstructured sources -->
+        <!-- stage 1: many tabular sources -->
         <div class="pstage src reveal">
-          <div class="plabel">▦ MANY UNSTRUCTURED SOURCES</div>
+          <div class="plabel">▦ MANY TABULAR SOURCES</div>
           <div class="srccluster">
-            <span class="schip">Clinical notes</span>
-            <span class="schip">DICOM</span>
-            <span class="schip">Path reports</span>
-            <span class="schip">HL7 v2</span>
-            <span class="schip">Discharge PDFs</span>
-            <span class="schip">Lab feeds</span>
-            <span class="schip">Free text</span>
-            <span class="schip">Scans</span>
+            <span class="schip">EHR</span>
+            <span class="schip">Labs</span>
+            <span class="schip">Pharmacy</span>
+            <span class="schip">Claims</span>
+            <span class="schip">Registries</span>
+            <span class="schip">Vitals</span>
+            <span class="schip">Encounters</span>
           </div>
-          <div class="srcmore">+ millions of records, no shared key</div>
+          <div class="srcmore">+ millions of rows, no shared key</div>
+          <div style="margin-top:1.2vmin;padding-top:1.2vmin;border-top:1px dashed var(--line);font-family:'JetBrains Mono',monospace;font-size:1.15vmin;letter-spacing:.04em;color:var(--signal)">⊕ optional: transformers turn text &amp; imaging → tabular</div>
         </div>
 
         <div class="pflow reveal"><div class="track"></div><span class="ah">▸</span></div>
@@ -553,7 +553,7 @@
           </div>
         </div>
       </div>
-      <div class="tiein reveal"><span>The layer does the heavy lifting — <b>the agent just maps a clean, joined semantic layer onto OMOP &amp; FHIR.</b></span></div>
+      <div class="tiein reveal"><span>NJ joins clean <b>tabular</b> data; the agent maps the joined layer onto <b>OMOP &amp; FHIR</b>. Text or imaging? An optional transformer turns them tabular first.</span></div>
     </section>
 
     <!-- ===== SLIDE 4 — FHIR / OMOP ===== -->
@@ -574,28 +574,28 @@
     <!-- ===== SLIDE 4 — ANONYMIZATION ===== -->
     <section class="slide">
       <div class="kicker reveal"><span class="idx">02</span> Privacy by design</div>
-      <h2 class="reveal">De-identification across <em>every</em> data type</h2>
+      <h2 class="reveal">De-identification, built for <em>tabular data</em></h2>
       <div class="types">
         <div class="type reveal">
-          <span class="tag">NLP</span>
-          <div class="glyph"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h12M4 18h8"/></svg></div>
-          <div class="name">Text</div>
-          <div class="sub">Free-text clinical notes scrubbed of identifiers while preserving meaning.</div>
+          <span class="tag">IDENTIFIERS</span>
+          <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8" cy="11" r="2.2"/><path d="M13 10h5M13 14h5M5 16h6"/></svg></div>
+          <div class="name">Direct IDs</div>
+          <div class="sub">Names, MRNs and account numbers removed or replaced with surrogates.</div>
         </div>
         <div class="type reveal">
-          <span class="tag">IMAGING</span>
-          <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="14" rx="2"/><path d="M3 14l5-4 4 3 3-3 6 5"/></svg></div>
-          <div class="name">DICOM</div>
-          <div class="sub">Imaging de-identified at pixel &amp; header level — metadata and burned-in PHI removed.</div>
+          <span class="tag">DATES &amp; RARE</span>
+          <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 9h18M8 3v4M16 3v4M7 13h2M11 13h2M15 13h2"/></svg></div>
+          <div class="name">Quasi-identifiers</div>
+          <div class="sub">Dates shifted and rare values generalized to block re-identification.</div>
         </div>
         <div class="type reveal">
-          <span class="tag">TABULAR</span>
-          <div class="glyph"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></svg></div>
-          <div class="name">Structured</div>
-          <div class="sub">Tabular &amp; coded data re-keyed and masked under consistent, governed rules.</div>
+          <span class="tag">KEYS</span>
+          <div class="glyph"><svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7 0l2-2a5 5 0 0 0-7-7l-1 1"/><path d="M14 11a5 5 0 0 0-7 0l-2 2a5 5 0 0 0 7 7l1-1"/></svg></div>
+          <div class="name">Stable pseudonyms</div>
+          <div class="sub">Consistent surrogate keys — so de-identified rows still join across sources.</div>
         </div>
       </div>
-      <div class="tiein reveal" style="margin-top:3.6vmin"><span>Consistent, <b>stable pseudonymous keys</b> — so data stays private and still joins across sources. Tools built in-house, then operated in production. ⋈</span></div>
+      <div class="tiein reveal" style="margin-top:3.6vmin"><span>Built in-house for <b>structured clinical data</b>, then operated in production — privacy that <b>preserves the join</b>. ⋈</span></div>
     </section>
 
     <!-- ===== SLIDE 5 — DATA PREPARATION ===== -->

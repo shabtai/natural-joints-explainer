@@ -4,9 +4,10 @@ Two deliverables in this folder:
 
 - **`index.html`** — the animated, self-advancing **video** (10 slides, screen-record it). Details below.
 - **`explainer.html`** — a single-page **illustrated explainer** with hand-drawn diagrams
-  (whiteboard/sketch style) that walks the whole solution: messy unstructured data →
+  (whiteboard/sketch style) that walks the whole solution: messy tabular data →
   the natural-join semantic layer (algorithmic linkage + research semantics) → an AI agent
-  emits OMOP/FHIR → research-ready output. One scrollable page.
+  emits OMOP/FHIR → research-ready output. (Other modalities go through optional
+  transformers → tabular first, shown as an add-on.) One scrollable page.
   - **Export as one image / PDF:** open in Chrome → `Cmd+P` → *Save as PDF* (or use a
     full-page screenshot extension). It's print-styled (animations freeze, white background).
 
@@ -15,7 +16,7 @@ Two deliverables in this folder:
 # Clinical Data — Capability Brief (animated video)
 
 A self-advancing, customer-facing presentation about your clinical-data practice:
-FHIR & OMOP interoperability, data anonymization (text / DICOM / structured),
+FHIR & OMOP interoperability, data anonymization (structured / tabular),
 big-data clinical-research data preparation, data stewardship, and the on-premise
 big-data platform.
 
@@ -37,9 +38,9 @@ vocabularies and a `NATURAL JOIN` "just works" across sources. Each slide ties b
 1. Cover — Clinical data, engineered for discovery (joins by design)
 2. **The problem** — same patient, three islands, no common key (the join fails)
 3. **The idea** — make data *naturally joinable*: shared `person_id` + standard concepts → `NATURAL JOIN`
-4. **How the layer is built** *(the pipeline)* — many unstructured sources → **NJ builds the semantic layer** (algorithmic linkage + research semantics) → **an AI agent emits OMOP CDM & FHIR**
+4. **How the layer is built** *(the pipeline)* — many tabular sources → **NJ builds the semantic layer** (algorithmic linkage + research semantics) → **an AI agent emits OMOP CDM & FHIR**. Text/imaging go through **optional transformers → tabular** first (an add-on, not part of NJ)
 5. Interoperability — FHIR & OMOP give every record the same shape (the join key); Clalit work groups
-6. Privacy by design — de-identification with stable keys, so private data still joins (Text · DICOM · Structured)
+6. Privacy by design — de-identification built for tabular data (direct IDs · quasi-identifiers · stable keys), so private data still joins
 7. Data preparation — the terminology layer is the join vocabulary (map → terminology → engineer & govern)
 8. Data stewardship — one source of truth behind every join (keys, sources, lineage)
 9. Platform — where the joins run, at scale (on-premise: roadmap → orchestrate → resources)

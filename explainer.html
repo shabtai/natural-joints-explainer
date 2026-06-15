@@ -278,7 +278,7 @@
     <h1 class="reveal">From messy clinical data<br>to <span class="u">research-ready
       <svg viewBox="0 0 300 24" class="doodle" preserveAspectRatio="none"><path d="M4 16 C 70 6, 150 22, 296 9" stroke="#d6852f" stroke-width="4"/></svg>
     </span> FHIR &amp; OMOP</h1>
-    <p class="sub reveal">The data lives in dozens of unstructured systems and won't join. Here's how <b>Natural Joints</b> turns it into one clean, standardized, <b>naturally joinable</b> dataset for DS, AI &amp; ML.</p>
+    <p class="sub reveal">The tabular data lives in dozens of separate systems and won't join. Here's how <b>Natural Joints</b> turns it into one clean, standardized, <b>naturally joinable</b> dataset for DS, AI &amp; ML.</p>
     <p class="note mint center reveal" style="margin-top:1rem">NJ = Natural Joints — joinable by name, joinable by design</p>
     <div class="legend reveal">
       <span><b>⋈</b> natural join = the payoff</span>
@@ -295,15 +295,15 @@
       <div class="badge">1</div>
       <div>
         <h2>The data won't join</h2>
-        <p>One patient is scattered across systems — clinical notes, lab feeds, imaging — each with its <b>own identifiers</b> and its <b>own code system</b>. There's no shared key, so you simply can't line the records up. The research stalls before it starts.</p>
+        <p>One patient is scattered across systems — diagnoses, lab results, pharmacy — each a table with its <b>own identifiers</b> and its <b>own code system</b>. There's no shared key, so you simply can't line the records up. The research stalls before it starts.</p>
       </div>
     </div>
     <div class="panel sketchbox reveal">
       <div class="silos">
         <div class="doc ink-coral">
           <span class="pin"><svg class="doodle" viewBox="0 0 40 50"><use href="#i-lock"/></svg></span>
-          <svg class="doodle" viewBox="0 0 48 60"><use href="#i-doc"/></svg>
-          <div class="tag">EHR notes<br>id = <b>MRN-4471</b></div>
+          <svg class="doodle" viewBox="0 0 60 50"><use href="#i-table"/></svg>
+          <div class="tag">EHR diagnoses<br>id = <b>MRN-4471</b></div>
         </div>
         <div class="breakmark">✗</div>
         <div class="doc ink-coral">
@@ -314,8 +314,8 @@
         <div class="breakmark">✗</div>
         <div class="doc ink-coral">
           <span class="pin"><svg class="doodle" viewBox="0 0 40 50"><use href="#i-lock"/></svg></span>
-          <svg class="doodle" viewBox="0 0 60 50"><use href="#i-scan"/></svg>
-          <div class="tag">DICOM imaging<br>id = <b>0x9F22</b></div>
+          <svg class="doodle" viewBox="0 0 60 50"><use href="#i-table"/></svg>
+          <div class="tag">Pharmacy<br>id = <b>RX-3055</b></div>
         </div>
       </div>
       <p class="note coral center" style="margin-top:1.6rem;transform:rotate(-1.5deg)">same patient — but nothing matches, so the join fails!</p>
@@ -354,7 +354,7 @@
         </div>
       </div>
       <div class="center">
-        <div class="codestrip"><span class="kw">SELECT</span> * <span class="kw">FROM</span> ehr <span class="kw">NATURAL JOIN</span> labs <span class="kw">NATURAL JOIN</span> imaging <span class="cm">-- it just works ✓</span></div>
+        <div class="codestrip"><span class="kw">SELECT</span> * <span class="kw">FROM</span> ehr <span class="kw">NATURAL JOIN</span> labs <span class="kw">NATURAL JOIN</span> pharmacy <span class="cm">-- it just works ✓</span></div>
       </div>
     </div>
   </section>
@@ -367,25 +367,35 @@
       <div class="badge">3</div>
       <div>
         <h2>How the layer gets built</h2>
-        <p>Unstructured data flows in. The <b>natural-join layer</b> does the algorithmic work — linking records and resolving research semantics — to build one clean semantic layer. Then an <b>AI agent</b> reads that layer and writes the standards out.</p>
+        <p>Tabular data flows in. The <b>natural-join layer</b> does the algorithmic work — linking records and resolving research semantics — to build one clean semantic layer. Then an <b>AI agent</b> reads that layer and writes the standards out. <i>(Other modalities? Optional transformers turn text &amp; imaging into tabular first.)</i></p>
       </div>
     </div>
     <div class="panel sketchbox reveal">
+      <!-- optional add-on: transformers (NOT part of NJ) -->
+      <div class="sketchbox alt" style="border-style:dashed;border-color:var(--coral);padding:1.1rem 1.4rem;margin-bottom:1.4rem;text-align:center">
+        <div class="srcgrid" style="justify-content:center;align-items:center">
+          <span style="border-color:var(--coral);color:var(--coral)">⊕ OPTIONAL · not part of NJ</span>
+          <span>Text</span><span>Imaging</span><span>Signals</span>
+          <b style="color:var(--coral)">→ Transformers →</b>
+          <span style="border-color:var(--mint-d);color:var(--mint-d)">Tabular</span>
+        </div>
+        <p class="note coral" style="font-size:.95rem;margin-top:.6rem">turn any modality into rows NJ can join — then it feeds the pipeline below ↓</p>
+      </div>
       <div class="pipe">
 
         <!-- stage 1 -->
         <div class="pnode src sketchbox alt">
-          <div class="ph">▦ many unstructured sources</div>
+          <div class="ph">▦ many tabular sources</div>
           <div class="srcgrid">
-            <span>Notes</span><span>DICOM</span><span>Path</span><span>HL7 v2</span><span>PDFs</span><span>Labs</span><span>Free text</span>
+            <span>EHR</span><span>Labs</span><span>Pharmacy</span><span>Claims</span><span>Registries</span><span>Vitals</span><span>Encounters</span>
           </div>
           <div class="srcnote">
             <div class="pile ink-amber">
-              <svg class="doodle" viewBox="0 0 48 60"><use href="#i-doc"/></svg>
-              <svg class="doodle" viewBox="0 0 60 50"><use href="#i-scan"/></svg>
-              <svg class="doodle" viewBox="0 0 48 60"><use href="#i-doc"/></svg>
+              <svg class="doodle" viewBox="0 0 60 50"><use href="#i-table"/></svg>
+              <svg class="doodle" viewBox="0 0 60 50"><use href="#i-table"/></svg>
+              <svg class="doodle" viewBox="0 0 60 50"><use href="#i-table"/></svg>
             </div>
-            <p class="note amber" style="font-size:.95rem;margin-top:.4rem">millions, no shared key</p>
+            <p class="note amber" style="font-size:.95rem;margin-top:.4rem">millions of rows, no shared key</p>
           </div>
         </div>
 
@@ -439,7 +449,7 @@
       <div class="value">
         <div class="chart ink-mint"><svg class="doodle" viewBox="0 0 64 64"><use href="#i-bars"/></svg></div>
         <ul>
-          <li><b>Joinable by design</b> — query across notes, labs &amp; imaging in one go</li>
+          <li><b>Joinable by design</b> — query across diagnoses, labs &amp; pharmacy in one go</li>
           <li><b>FHIR &amp; OMOP native</b> — portable, standards-based, reusable</li>
           <li><b>Private &amp; safe</b> — de-identified with stable keys that still join</li>
           <li><b>Ready for DS / AI / ML</b> — cohorts, features &amp; models, faster</li>
@@ -476,7 +486,7 @@
       <div class="fcard sketchbox reveal ink-mint">
         <svg class="doodle" viewBox="0 0 40 50"><use href="#i-lock"/></svg>
         <div class="ft">Anonymization</div>
-        <div class="fd">Text · DICOM · structured, de-identified in-house</div>
+        <div class="fd">Structured &amp; coded data, de-identified in-house</div>
       </div>
       <div class="fcard sketchbox alt reveal ink-mint">
         <svg class="doodle" viewBox="0 0 56 50"><use href="#i-book"/></svg>
