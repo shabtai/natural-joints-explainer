@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>Clinical Data Engineering — FHIR · OMOP · Big Data</title>
+<title>Natural Joints — Clinical Data Engineering · FHIR · OMOP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..600&family=Archivo:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -265,11 +265,19 @@
   .closing h1 { font-size: 10vmin; max-width: 18ch; margin: 0 auto; }
   .closing .lede { margin-left: auto; margin-right: auto; text-align: center; max-width: 50ch; }
   .closing .cta {
-    margin-top: 5vmin; display: inline-flex; gap: 2vmin; align-items: center;
+    margin-top: 4.4vmin; display: inline-flex; gap: 2vmin; align-items: center;
     font-family: 'JetBrains Mono', monospace; font-size: 1.7vmin; letter-spacing: 0.1em;
     color: var(--ink); background: var(--aqua); padding: 1.6vmin 3vmin; border-radius: 100px;
     box-shadow: 0 0 40px var(--glow);
   }
+
+  /* brand wordmark (cover) + sign-off (closing) */
+  .brand-word { font-family: 'Fraunces', serif; font-weight: 500; font-size: 2.5vmin; letter-spacing: 0.01em; color: var(--paper); display: inline-flex; align-items: center; gap: 1vmin; margin-bottom: 2.6vmin; }
+  .brand-word b { color: var(--aqua); font-weight: 600; }
+  .signoff { display: flex; flex-wrap: wrap; gap: 1.2vmin; justify-content: center; align-items: center; margin-top: 3.2vmin; font-family: 'JetBrains Mono', monospace; font-size: 1.45vmin; color: var(--paper-dim); letter-spacing: 0.04em; }
+  .signoff .so-brand { color: var(--paper); font-weight: 600; }
+  .signoff a { color: var(--aqua); text-decoration: none; }
+  .signoff .sep { color: var(--muted); }
 
   /* mini flow diagram on FHIR slide */
   .flow { display: flex; align-items: center; gap: 2.2vmin; margin-top: 4.5vmin; flex-wrap: wrap; }
@@ -429,10 +437,11 @@
 
     <!-- HUD -->
     <div class="progress"><div class="bar" id="bar"></div></div>
-    <div class="brandmark"><span class="pulse"></span> CLINICAL DATA · CAPABILITY BRIEF</div>
+    <div class="brandmark"><span class="pulse"></span> NATURAL JOINTS · CAPABILITY BRIEF</div>
 
     <!-- ===== SLIDE 0 — COVER ===== -->
     <section class="slide cover active">
+      <div class="brand-word reveal">Natural Joints <b>⋈</b></div>
       <div class="kicker reveal"><span class="idx">FHIR</span> · OMOP · BIG DATA · ANONYMIZATION</div>
       <h1 class="reveal">Clinical data,<br>engineered for <em>discovery.</em></h1>
       <div class="badges reveal">
@@ -673,7 +682,13 @@
       <h1 class="reveal">Clinical data that <em>joins by design.</em></h1>
       <p class="lede reveal">FHIR &amp; OMOP for shared keys, privacy that preserves them, and an on-premise platform to run the joins — so your DS, AI and ML start from one ready, governed, trusted cohort.</p>
       <div class="tiein reveal" style="margin-top:3vmin;text-align:left"><span>Benchmarked: <b>higher accuracy</b> than the latest Claude model — at <b>~1/10 the price</b>. ⋈</span></div>
-      <div class="cta reveal">LET'S TALK DATA ⋈</div>
+      <a class="cta reveal" href="mailto:ran@natural-joints.com" style="text-decoration:none">LET'S TALK DATA ⋈</a>
+      <div class="signoff reveal">
+        <span class="so-brand">Natural Joints</span><span class="sep">·</span>
+        <span>Ran Tene, CEO</span><span class="sep">·</span>
+        <a href="mailto:ran@natural-joints.com">ran@natural-joints.com</a><span class="sep">·</span>
+        <a href="https://www.natural-joints.com/" target="_blank" rel="noopener">www.natural-joints.com</a>
+      </div>
     </section>
 
     <!-- HUD bottom -->
